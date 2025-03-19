@@ -6,6 +6,14 @@
 #include <SFML/Network/TcpSocket.hpp>
 #include <SFML/Network/IpAddress.hpp>
 #include <string>
+void swap(int &a, int &b){
+    int temp;
+    if (a > b){
+        temp = a;
+        a = b;
+        b = temp;
+    }
+}
 static::std::vector<std::string> split(const std::string& str, char delimiter = ' ', bool allow_empty = false){
     
     std::vector<std::string> tokens;
@@ -46,13 +54,49 @@ static bool validate_address (std::string addr){
     
 }
 static bool validate_ports (const std::string& addr) {
-     std::regex ports_regex (R"([\d]{2,5}\-[\d]{2,5}([\,][\s]?)?([\d]{2,5}(([\s])?[\,]([\s])?)?)*$\b)");
+     std::regex ports_regex (R"(^[\d]{2,5}\-[\d]{2,5}([\,][\s]?)?([\d]{2,5}(([\s])?[\,]([\s])?)?)*$\b)");
+     if (regex_match(addr, ports_regex)){
+        std::vector<std::string> port_list = split(addr,',');
+        std::string range = port_list[0];
+        int range_pos = range.find('-');
+        int min = stoi(range.substr(0,range_pos));
+        int max = stoi(range.substr(range_pos + 1, range.size()-1));
+        swap(min,max);
+        if (min < 20){
+           std::cout << "Port #: " << min << " has to be greater than 20." << std::endl;
+           return false;
+        } else if (max > 65535){
+           std::cout << "Port #: " << max << " has to be lesser than 65,535." << std::endl;
+           return false;
+        }
+     }
     return(regex_match(addr, ports_regex));
 }
-// static std::vector<int> parse_ports(std::string& usr_ports) {
-    
+static std::vector<int> parse_ports(std::string& usr_ports) {
+    std::vector<int> ports;
+    std::vector<std::string> port_list = split(usr_ports,',');
+    int range_pos;
 
-// }
+    for(auto i : port_list){
+        std::cout << i << std::endl;
+        range_pos = i.find('-');
+        if(range_pos != std::string::npos){
+            int min = stoi(i.substr(0,range_pos));
+            int max = stoi(i.substr(range_pos + 1, i.size()-1));
+            swap(min,max);
+            std::cout << "min: " << min << " max: " << max << std::endl; 
+            // // for(int j = min; j < max; j++){
+            // //     ports.push_back(j);
+            // // }
+        }
+        else {
+            ports.push_back(stoi(i));
+
+        }
+    }
+    return ports;
+
+}
 void greeting (std::string& addr, std::vector<int>& ports ) {
     std::string usr_ports;
     bool valid_addr;
@@ -78,6 +122,7 @@ void greeting (std::string& addr, std::vector<int>& ports ) {
 
     }
     std::cout << "Everything is valid\n";
+    ports = parse_ports(usr_ports);
     std::cout << "-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~\n";
 }
 
@@ -90,7 +135,7 @@ int main () {
         greeting(user_addr, user_ports);
 
         std::cout << "user address: " << user_addr << std::endl;
-        // std::cout << "user ports: " << user_ports << std::endl;
+        std::cout << "user ports: " << user_ports[0] << std::endl;
         program_runs = false; 
 
     } while(program_runs);
