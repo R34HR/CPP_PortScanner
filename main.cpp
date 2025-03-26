@@ -30,6 +30,7 @@ static::std::vector<std::string> split(const std::string& str, char delimiter = 
 static bool port_is_open (const std::string& address, int port){
     return(sf::TcpSocket().connect(address, port) == sf::Socket::Done);
 }
+
 static bool validate_address (std::string addr){
     std::regex IPaddr_regex(R"(^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$\b)");
     std::regex url_regex(R"((https:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,128}\.[a-zA-Z0-9()]{1,6}\b)");
@@ -76,18 +77,16 @@ static std::vector<int> parse_ports(std::string& usr_ports) {
     std::vector<int> ports;
     std::vector<std::string> port_list = split(usr_ports,',');
     int range_pos;
-
     for(auto i : port_list){
-        std::cout << i << std::endl;
         range_pos = i.find('-');
         if(range_pos != std::string::npos){
             int min = stoi(i.substr(0,range_pos));
             int max = stoi(i.substr(range_pos + 1, i.size()-1));
             swap(min,max);
+            for(int j = min; j <= max; j++){
+                ports.push_back(j);
+            }
             std::cout << "min: " << min << " max: " << max << std::endl; 
-            // // for(int j = min; j < max; j++){
-            // //     ports.push_back(j);
-            // // }
         }
         else {
             ports.push_back(stoi(i));
@@ -99,6 +98,7 @@ static std::vector<int> parse_ports(std::string& usr_ports) {
 }
 void greeting (std::string& addr, std::vector<int>& ports ) {
     std::string usr_ports;
+    sf::IpAddress local_ip = sf::IpAddress::getPublicAddress();
     bool valid_addr;
     bool valid_ports;
     std::cout << "-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~\n";
@@ -106,6 +106,8 @@ void greeting (std::string& addr, std::vector<int>& ports ) {
     std::cout << std::setw(25) << "Please enter the URL or IPv4 address that you'd like to scan: ";
     std::cin >> addr;
     valid_addr = validate_address(addr);
+    
+    // Validates user input address
     while (!valid_addr) {
         std::cout << addr <<" is not valid, Please enter a valid URL or IP address you'd like to scan: ";
         std::cin >> addr;
@@ -115,6 +117,8 @@ void greeting (std::string& addr, std::vector<int>& ports ) {
     std::cin.ignore();
     getline(std::cin, usr_ports, '\n');
     valid_ports = validate_ports(usr_ports);
+   
+    // Validates Ports format
     while(!valid_ports){
         std::cout << usr_ports <<" is not valid, Please enter a port entry you'd like to scan: ";
         getline(std::cin, usr_ports, '\n');
@@ -123,6 +127,7 @@ void greeting (std::string& addr, std::vector<int>& ports ) {
     }
     std::cout << "Everything is valid\n";
     ports = parse_ports(usr_ports);
+    std::cout << "Public IP Address: " << local_ip << std::endl;
     std::cout << "-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~\n";
 }
 
@@ -134,18 +139,20 @@ int main () {
     do{
         greeting(user_addr, user_ports);
 
-        std::cout << "user address: " << user_addr << std::endl;
-        std::cout << "user ports: " << user_ports[0] << std::endl;
+        std::cout << "Address to search: " << user_addr << std::endl;
+        std::cout << "Scanning ports... \n";
+        for(auto i : user_ports){
+            std::cout << "Port " << i << ": "; 
+            if (port_is_open(user_addr, i)){
+                std::cout << "OPEN" << std::endl;
+            } else {
+                std::cout << "CLOSED" << std::endl;
+            }
+        }
         program_runs = false; 
 
     } while(program_runs);
 
-    std::cout << "Port 20: ";
-    if (port_is_open("127.0.0.1", 20)){
-        std::cout << "OPEN" << std::endl;
-    } else {
-        std::cout << "CLOSED" << std::endl;
-    }
     
     return 0;
 }
